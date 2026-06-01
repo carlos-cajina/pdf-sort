@@ -117,6 +117,7 @@ BANK_ALIASES: Final[dict[str, str]] = {
     "HSBC": "HSBC",
     "MERCADO PAGO": "MercadoPago",
     "MERCADO PAGO W": "MercadoPago",
+    "TDC COSTCO BANAME": "Costco",
 }
 
 

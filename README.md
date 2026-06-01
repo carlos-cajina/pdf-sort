@@ -123,7 +123,7 @@ transf<SourceBank>_to_<DestinationBank>_x<Amount>_MMMYYYY.pdf
 | `BBVA` | Credit card bank name (`BBVA Bancomer`) |
 | `Banorte` | CLABE beneficiary name |
 | `MercadoPago` | CLABE beneficiary name |
-| `TDCCostcoBaname` | Credit card brand name |
+| `Costco` | Credit card brand name |
 
 ---
 

@@ -138,7 +138,7 @@ class TestIdentifyBanks:
     def test_banamex_tdc_to_costco(self):
         src, dst = identify_banks(_BANAMEX_TDC_TEXT)
         assert src == "Banamex"
-        assert dst == "TDCCostcoBaname"
+        assert dst == "Costco"
 
     def test_santander_tdc_other_to_bbva(self):
         src, dst = identify_banks(_SANTANDER_TDC_OTHER_TEXT)
