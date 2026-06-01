@@ -10,7 +10,7 @@ from pathlib import Path
 import pdfplumber
 
 from .extract import extract_info
-from .io import copy_pdfs, rename_with_rollback
+from .io import copy_pdfs, rename_with_rollback, archive_processed
 from .rename import build_filename, deduplicate
 
 logger = logging.getLogger("pdf_sort")
@@ -49,6 +49,18 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--overwrite",
         action="store_true",
         help="Overwrite existing files in output dir when copying",
+    )
+    parser.add_argument(
+        "--processed-dir",
+        type=Path,
+        default=None,
+        help="Move successfully processed source PDFs into this directory",
+    )
+    parser.add_argument(
+        "--renamed-dir",
+        type=Path,
+        default=None,
+        help="Copy renamed PDFs into this directory",
     )
     parser.add_argument(
         "-v", "--verbose",
@@ -128,6 +140,26 @@ def main(argv: list[str] | None = None) -> list[dict] | None:
         print("=" * 80)
         print("DRY RUN complete. No files were renamed.")
         print("=" * 80)
+
+        # ── Dry-run archival preview ────────────────────────────────────
+        processed_dir = args.processed_dir.expanduser().resolve() if args.processed_dir else None
+        renamed_dir = args.renamed_dir.expanduser().resolve() if args.renamed_dir else None
+        if processed_dir or renamed_dir:
+            print()
+            print("=" * 80)
+            print("[DRY RUN] Would also:")
+            print("=" * 80)
+            if renamed_dir:
+                print(f"  Copy renamed files to: {renamed_dir}/")
+            if processed_dir:
+                print(f"  Move processed originals to: {processed_dir}/")
+            for p in plan:
+                if p["new_name"] is not None:
+                    if renamed_dir:
+                        print(f"    {p['new_name']} → {renamed_dir / p['new_name']}")
+                    if processed_dir:
+                        print(f"    {p['original']} → {processed_dir / p['original']}")
+
         print("\nTo proceed with actual renaming, run:")
         print("  python3 -m pdf_sort.cli --execute\n")
         return plan
@@ -136,6 +168,27 @@ def main(argv: list[str] | None = None) -> list[dict] | None:
     print("RENAMING FILES…")
     print("=" * 80)
     renamed = rename_with_rollback(plan, output_dir)
+
+    # ── Step 5: Archive to processed / renamed dirs ──────────────────
+    processed_dir = args.processed_dir.expanduser().resolve() if args.processed_dir else None
+    renamed_dir = args.renamed_dir.expanduser().resolve() if args.renamed_dir else None
+
+    if processed_dir or renamed_dir:
+        print()
+        print("=" * 80)
+        print("ARCHIVING FILES…")
+        print("=" * 80)
+        copied, moved = archive_processed(
+            renamed, input_dir,
+            processed_dir=processed_dir,
+            renamed_dir=renamed_dir,
+            dry_run=False,
+        )
+        if copied:
+            print(f"  → {copied} file(s) copied to renamed dir")
+        if moved:
+            print(f"  → {moved} file(s) moved to processed dir")
+
     print(f"\nDone! {len(renamed)} file(s) renamed.")
     if skipped:
         print(f"  ({skipped} file(s) skipped due to incomplete extraction)")
