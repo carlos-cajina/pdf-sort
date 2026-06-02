@@ -18,17 +18,27 @@ def sanitize_filename(name: str) -> str:
     return _SANITIZE_RE.sub("_", name)
 
 
-def copy_pdfs(input_dir: Path, output_dir: Path, overwrite: bool = True) -> list[Path]:
-    """Copy all PDFs from *input_dir* to *output_dir*.
+def copy_pdfs(
+    input_dir: Path,
+    output_dir: Path,
+    overwrite: bool = True,
+    limit: int | None = None,
+) -> list[Path]:
+    """Copy PDFs from *input_dir* to *output_dir*.
 
     Returns list of destination paths.  (CR-2 fix: warn on collision,
     overwrite by default.)
     """
     output_dir.mkdir(parents=True, exist_ok=True)
+    if not input_dir.exists():
+        logger.warning("Input directory does not exist: %s", input_dir)
+        return []
     pdf_files = sorted(
         f for f in input_dir.iterdir()
         if f.suffix.lower() == ".pdf"
     )
+    if limit is not None:
+        pdf_files = pdf_files[:limit]
 
     if not pdf_files:
         logger.warning("No PDF files found in %s", input_dir)
@@ -65,14 +75,23 @@ def rename_with_rollback(plan: list[dict], target_dir: Path) -> list[dict]:
                 continue
             old_path: Path = item["path"]
             new_path = target_dir / item["new_name"]
-            old_path.rename(new_path)
+            shutil.move(str(old_path), str(new_path))  # M8: cross-device safe
             logger.info("✓ %s → %s", item["original"], item["new_name"])
             renamed.append({**item, "old_path": old_path, "new_path": new_path})
     except Exception:
         logger.error("Rename failed — rolling back %d file(s)…", len(renamed))
+        rollback_errors: list[Exception] = []
         for item in reversed(renamed):
-            item["new_path"].rename(item["old_path"])
-            logger.info("Rolled back: %s ← %s", item["original"], item["new_name"])
+            try:
+                shutil.move(str(item["new_path"]), str(item["old_path"]))
+                logger.info("Rolled back: %s ← %s", item["original"], item["new_name"])
+            except Exception as rb_exc:  # H4: don't let rollback failure shadow original
+                rollback_errors.append(rb_exc)
+                logger.error("Rollback failed for %s: %s", item["original"], rb_exc)
+        if rollback_errors:
+            raise RuntimeError(
+                f"Rename failed and {len(rollback_errors)} rollback error(s) occurred"
+            ) from rollback_errors[0]
         raise
 
     return renamed

@@ -470,7 +470,7 @@ class TestExtractInfo:
             "CUENT\uffff\uffffDESTINO \uffff 4772133048882663\n"
             "Tarjeta\uffffde\uffffcr\u00e9dito\n"
             "TIPO\uffffDE\uffffOPER\uffffCI\u00d3N \uffff TR\uffffSP\uffffSO\uffffCUENT\uffffS\uffffPROPI\uffffS\uffff(TDC)\n"
-            "FECH\uffff\uffffDE\uffffOPER\uffffCI\u00d3N \uffff 04/05/2026\uffff3:34:48\uffffPM"
+            "FECH\uffff\uffffDE\uffffOPER\uffffCI\u00d3N \uffff 04/05/2026 \uffff3:34:48\uffffPM"
         )
         info = extract_info(corrupt_text)
         assert info.source_bank == "BBVA"

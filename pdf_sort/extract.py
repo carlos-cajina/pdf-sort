@@ -63,12 +63,12 @@ _DATE_DMY_PATTERNS: Final[list[tuple[re.Pattern[str], str]]] = [
 ]
 
 _DATE_NUMERIC_PATTERNS: Final[list[re.Pattern[str]]] = [
-    re.compile(r"Fecha de operación:\s*(\d{2})/(\d{2})/(\d{4})"),
-    re.compile(r"Fecha de operación:\s*(\d{2})-(\d{2})-(\d{4})"),  # Ph1-1B: 22-04-2026 (BBVA SPEI)
-    re.compile(r"Fecha de aplicación:\s*(\d{2})-(\d{2})-(\d{4})"),
-    re.compile(r"Fecha:\s*(\d{2})/(\d{2})/(\d{4})"),
-    re.compile(r"(\d{2})/(\d{2})/(\d{4})"),
-    re.compile(r"(\d{2})-(\d{2})-(\d{4})"),  # Ph1-1B: bare 22-04-2026
+    re.compile(r"Fecha de operación:\s*(\d{2})/(\d{2})/(\d{4})\b"),
+    re.compile(r"Fecha de operación:\s*(\d{2})-(\d{2})-(\d{4})\b"),  # Ph1-1B: 22-04-2026 (BBVA SPEI)
+    re.compile(r"Fecha de aplicación:\s*(\d{2})-(\d{2})-(\d{4})\b"),
+    re.compile(r"Fecha:\s*(\d{2})/(\d{2})/(\d{4})\b"),
+    re.compile(r"\b(\d{2})/(\d{2})/(\d{4})\b"),
+    re.compile(r"\b(\d{2})-(\d{2})-(\d{4})\b"),  # Ph1-1B: bare 22-04-2026
 ]
 
 # Amount patterns — ordered by specificity.  We deliberately omit any
@@ -76,6 +76,7 @@ _DATE_NUMERIC_PATTERNS: Final[list[re.Pattern[str]]] = [
 # Single-line patterns only (per-line search in pass 2).
 _AMOUNT_PATTERNS: Final[list[re.Pattern[str]]] = [
     # Labeled amounts with decimals
+    re.compile(r"Importe\s+\$?\s*([\d,]+\.\d{2})", re.IGNORECASE),  # BBVA own-TDC: "IMPORTE  $10,000.00" (no colon)
     re.compile(r"Importe a pagar:\s*\$?\s*([\d,]+\.\d{2})"),  # Ph1-1C: BBVA SPEI
     re.compile(r"Importe:\s*\$?\s*([\d,]+\.\d{2})"),
     re.compile(r"Importe Pagado:\s*\$?\s*([\d,]+\.\d{2})"),
@@ -85,9 +86,11 @@ _AMOUNT_PATTERNS: Final[list[re.Pattern[str]]] = [
     re.compile(r"Importe Pagado:\s*\$?\s*([\d,]+)(?:\s|$)"),  # Ph1-1A
     re.compile(r"Importe:\s*\$?\s*([\d,]+)(?:\s|$)"),
     re.compile(r"Monto\s*\$?\s*([\d,]+\.\d{2})"),
-    # Generic dollar amounts (must come after labeled patterns)
-    re.compile(r"\$\s*([\d,]+\.\d{2})"),
-    re.compile(r"\$\s*([\d,]+)(?:\s|$)"),  # Ph1-1A: $85, $900 without decimals
+    # Generic dollar amounts (must come after labeled patterns).
+    # Anchored to line start to avoid matching balance/header text
+    # like "Balance: $5,000.00" when a labelled amount exists elsewhere.  (C3)
+    re.compile(r"^\s*\$\s*([\d,]+\.\d{2})"),
+    re.compile(r"^\s*\$\s*([\d,]+)(?:\s|$)"),  # Ph1-1A: $85, $900 without decimals
 ]
 
 # Multi-line patterns for full-text search in pass 1.
@@ -227,9 +230,10 @@ def _clean_bank_name(name: str) -> str:
 def _parse_date_dmy(day_s: str, mon_s: str, year_s: str, fmt: str = "%b") -> datetime | None:
     day = int(day_s)
     mon_lower = mon_s.lower()
-    year: int
     if fmt == "%y":
-        year = 2000 + int(year_s)
+        y = int(year_s)
+        # M3: century inference — receipts from 1990s use 50-99, 2000s+ use 00-49
+        year = 2000 + y if y < 50 else 1900 + y
     else:
         year = int(year_s)
     if mon_lower in MONTH_MAP_ES:
@@ -346,6 +350,7 @@ def identify_banks(text: str) -> tuple[str, str]:
         text_nospace = text_upper.replace(" ", "")
         for fuzzy_set in bbva_cfg.get("fuzzy_markers", []):
             if all(m.replace(" ", "") in text_nospace for m in fuzzy_set):
+                logger.warning("BBVA matched via fuzzy markers (corrupted text): %s", fuzzy_set)  # M5
                 is_bbva = True
                 break
 
@@ -362,6 +367,7 @@ def identify_banks(text: str) -> tuple[str, str]:
         text_nospace = text_upper.replace(" ", "")
         for fuzzy_set in bbva_cfg.get("fuzzy_markers", []):
             if all(m.replace(" ", "") in text_nospace for m in fuzzy_set):
+                logger.warning("BBVA own-TDC matched via fuzzy markers: %s", fuzzy_set)  # M5
                 return (_clean_bank_name("BBVA"), _clean_bank_name("BBVA"))
         return (_clean_bank_name("BBVA"), "OTHER")
 
