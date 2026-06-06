@@ -229,7 +229,9 @@ def _parse_date_dmy(day_s: str, mon_s: str, year_s: str, fmt: str = "%b") -> dat
     mon_lower = mon_s.lower()
     year: int
     if fmt == "%y":
-        year = 2000 + int(year_s)
+        # Century inference: 00–49 → 2000s, 50–99 → 1900s
+        y = int(year_s)
+        year = 2000 + y if y < 50 else 1900 + y
     else:
         year = int(year_s)
     if mon_lower in MONTH_MAP_ES:
@@ -346,6 +348,7 @@ def identify_banks(text: str) -> tuple[str, str]:
         text_nospace = text_upper.replace(" ", "")
         for fuzzy_set in bbva_cfg.get("fuzzy_markers", []):
             if all(m.replace(" ", "") in text_nospace for m in fuzzy_set):
+                logger.info("BBVA detected via fuzzy match — text may be partially corrupted")
                 is_bbva = True
                 break
 

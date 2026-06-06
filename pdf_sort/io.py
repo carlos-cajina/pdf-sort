@@ -78,13 +78,37 @@ def rename_with_rollback(plan: list[dict], target_dir: Path) -> list[dict]:
     return renamed
 
 
-def _find_source_in_dir(input_dir: Path, sanitized_name: str) -> Path | None:
+def build_source_index(input_dir: Path) -> dict[str, Path]:
+    """Build a {sanitized_name: real_path} lookup dict for all PDFs in *input_dir*.
+
+    This allows O(1) lookup instead of O(n) scanning when finding source files
+    by their sanitized names.
+    """
+    return {
+        sanitize_filename(f.name): f
+        for f in input_dir.iterdir()
+        if f.suffix.lower() == ".pdf"
+    }
+
+
+def _find_source_in_dir(
+    input_dir: Path,
+    sanitized_name: str,
+    index: dict[str, Path] | None = None,
+) -> Path | None:
     """Find the real source PDF in *input_dir* whose sanitized name
-    matches *sanitized_name*.  Returns None if no match."""
+    matches *sanitized_name*.  Returns None if no match.
+
+    If *index* is provided (from :func:`build_source_index`), uses O(1)
+    lookup; otherwise falls back to O(n) directory scan.
+    """
     # Fast path: direct match (must be a .pdf)
     direct = input_dir / sanitized_name
     if direct.exists() and direct.suffix.lower() == ".pdf":
         return direct
+    # Index lookup
+    if index is not None:
+        return index.get(sanitized_name)
     # Slow path: scan for PDFs whose sanitized name matches
     for f in input_dir.iterdir():
         if f.suffix.lower() == ".pdf" and sanitize_filename(f.name) == sanitized_name:
@@ -106,6 +130,9 @@ def archive_processed(
     """
     copied = 0
     moved = 0
+
+    # Build source index once for O(1) lookup per file (perf)
+    source_index: dict[str, Path] = build_source_index(input_dir) if processed_dir else {}
 
     for item in plan:
         if item.get("new_name") is None:
@@ -129,7 +156,7 @@ def archive_processed(
 
         # ── Move original from input_dir to processed_dir ──────────
         if processed_dir is not None:
-            src_file = _find_source_in_dir(input_dir, original_name)
+            src_file = _find_source_in_dir(input_dir, original_name, source_index)
             if src_file is not None:
                 processed_dir.mkdir(parents=True, exist_ok=True)
                 dst = processed_dir / src_file.name
