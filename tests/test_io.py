@@ -100,6 +100,44 @@ class TestCopyPdfs:
         result = copy_pdfs(src, dst)
         assert result == []
 
+    def test_duplicate_sanitized_name_last_wins_overwrite(self, tmp_path):
+        """Two source files that sanitize to the same name: last one wins when overwrite=True."""
+        src = tmp_path / "src"
+        dst = tmp_path / "dst"
+        src.mkdir()
+        (src / "file one.pdf").write_text("first")
+        (src / "file_one.pdf").write_text("second")
+
+        result = copy_pdfs(src, dst, overwrite=True)
+        assert len(result) == 1
+        assert (dst / "file_one.pdf").read_text() == "second"
+
+    def test_duplicate_sanitized_name_first_wins_no_overwrite(self, tmp_path):
+        """Two source files that sanitize to the same name: first one wins when overwrite=False."""
+        src = tmp_path / "src"
+        dst = tmp_path / "dst"
+        src.mkdir()
+        (src / "file one.pdf").write_text("first")
+        (src / "file_one.pdf").write_text("second")
+
+        result = copy_pdfs(src, dst, overwrite=False)
+        assert len(result) == 1
+        assert (dst / "file_one.pdf").read_text() == "first"
+
+    def test_duplicate_sanitized_name_with_existing_dst_no_overwrite(self, tmp_path):
+        """Existing dst + duplicate source: only one entry, first wins."""
+        src = tmp_path / "src"
+        dst = tmp_path / "dst"
+        src.mkdir()
+        dst.mkdir()
+        (dst / "file_one.pdf").write_text("existing")
+        (src / "file one.pdf").write_text("first")
+        (src / "file_one.pdf").write_text("second")
+
+        result = copy_pdfs(src, dst, overwrite=False)
+        assert len(result) == 1
+        assert (dst / "file_one.pdf").read_text() == "existing"
+
 
 class TestArchiveProcessed:
     def test_copies_to_renamed_dir(self, tmp_path):

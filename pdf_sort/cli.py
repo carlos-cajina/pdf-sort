@@ -47,8 +47,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument(
         "--overwrite",
-        action="store_true",
-        help="Overwrite existing files in output dir when copying",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Overwrite existing files in output dir when copying (default: True)",
     )
     parser.add_argument(
         "--processed-dir",
@@ -116,7 +117,7 @@ def main(argv: list[str] | None = None) -> list[dict] | None:
 
     print()
     print("=" * 80)
-    print("PROPOSED RENAMES:" if dry_run else "RENAMING FILES…")
+    print("PROPOSED RENAMES:")
     print("=" * 80)
 
     skipped = 0

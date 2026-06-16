@@ -23,6 +23,11 @@ def copy_pdfs(input_dir: Path, output_dir: Path, overwrite: bool = True) -> list
 
     Returns list of destination paths.  (CR-2 fix: warn on collision,
     overwrite by default.)
+
+    Source files that resolve to the same sanitized destination name (e.g.
+    due to Unicode normalization collisions) are de-duplicated: with
+    *overwrite=True* the last file wins; with *overwrite=False* the first
+    file wins and duplicates are skipped.
     """
     output_dir.mkdir(parents=True, exist_ok=True)
     pdf_files = sorted(
@@ -34,20 +39,34 @@ def copy_pdfs(input_dir: Path, output_dir: Path, overwrite: bool = True) -> list
         logger.warning("No PDF files found in %s", input_dir)
         return []
 
-    copied: list[Path] = []
+    copied: dict[str, Path] = {}
     for src in pdf_files:
         safe_name = sanitize_filename(src.name)
         dst = output_dir / safe_name
+
+        if safe_name in copied:
+            if overwrite:
+                logger.warning(
+                    "Duplicate sanitized filename %r — using last: %s",
+                    safe_name, src.name,
+                )
+            else:
+                logger.warning(
+                    "Duplicate sanitized filename %r — skipping: %s",
+                    safe_name, src.name,
+                )
+                continue
+
         if dst.exists() and not overwrite:
             logger.warning("Skipping existing file: %s (use --overwrite to replace)", dst)
-            copied.append(dst)
-            continue
-        shutil.copy2(src, dst)
-        logger.debug("Copied %s → %s", src.name, dst.name)
-        copied.append(dst)
+        else:
+            shutil.copy2(src, dst)
+            logger.debug("Copied %s → %s", src.name, dst.name)
+
+        copied[safe_name] = dst
 
     logger.info("Copied %d file(s) to %s", len(copied), output_dir)
-    return copied
+    return list(copied.values())
 
 
 def rename_with_rollback(plan: list[dict], target_dir: Path) -> list[dict]:
