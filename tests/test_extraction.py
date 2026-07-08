@@ -9,28 +9,28 @@ from pdf_sort.extract import (
     identify_banks,
     extract_amount,
     extract_info,
-    _clean_bank_name,
-    _clean_text,
+    clean_bank_name,
+    clean_text,
     TransactionInfo,
 )
 
 MX_TZ = ZoneInfo("America/Mexico_City")
 
 
-# ── _clean_text (Ph1-1D) ────────────────────────────────────────────────
+# ── clean_text (Ph1-1D) ────────────────────────────────────────────────
 
 class TestCleanText:
     def test_strips_uffff(self):
-        assert _clean_text("BBV\uffff\uffffM\u00e9xico") == "BBVM\u00e9xico"
+        assert clean_text("BBV\uffff\uffffM\u00e9xico") == "BBVM\u00e9xico"
 
     def test_strips_ufffd(self):
-        assert _clean_text("test\ufffdhere") == "testhere"
+        assert clean_text("test\ufffdhere") == "testhere"
 
     def test_strips_null(self):
-        assert _clean_text("abc\x00def") == "abcdef"
+        assert clean_text("abc\x00def") == "abcdef"
 
     def test_preserves_normal_text(self):
-        assert _clean_text("BBVA M\u00e9xico, S.A.") == "BBVA M\u00e9xico, S.A."
+        assert clean_text("BBVA M\u00e9xico, S.A.") == "BBVA M\u00e9xico, S.A."
 
 
 # ── parse_date ─────────────────────────────────────────────────────────
@@ -406,38 +406,38 @@ class TestExtractAmount:
         assert extract_amount(text) == 10224.01
 
 
-# ── _clean_bank_name ────────────────────────────────────────────────────
+# ── clean_bank_name ────────────────────────────────────────────────────
 
 class TestCleanBankName:
     def test_acronym_stays_upper(self):
-        assert _clean_bank_name("BBVA") == "BBVA"
-        assert _clean_bank_name("HSBC") == "HSBC"
-        assert _clean_bank_name("TDC") == "TDC"
+        assert clean_bank_name("BBVA") == "BBVA"
+        assert clean_bank_name("HSBC") == "HSBC"
+        assert clean_bank_name("TDC") == "TDC"
 
     def test_uppercase_converted_to_title(self):
-        assert _clean_bank_name("BANAMEX") == "Banamex"
-        assert _clean_bank_name("SANTANDER") == "Santander"
+        assert clean_bank_name("BANAMEX") == "Banamex"
+        assert clean_bank_name("SANTANDER") == "Santander"
 
     def test_lowercase_converted_to_title(self):
-        assert _clean_bank_name("bancomer") == "Bancomer"
+        assert clean_bank_name("bancomer") == "Bancomer"
 
     def test_mixed_case_preserved_strip_spaces(self):
-        assert _clean_bank_name("Mercado Pago") == "MercadoPago"
-        assert _clean_bank_name("Banorte") == "Banorte"
+        assert clean_bank_name("Mercado Pago") == "MercadoPago"
+        assert clean_bank_name("Banorte") == "Banorte"
 
     def test_bank_aliases_resolve(self):
-        assert _clean_bank_name("BBVA Mexico") == "BBVA"
-        assert _clean_bank_name("BBVA MEXICO") == "BBVA"
-        assert _clean_bank_name("BBVA Bancomer") == "BBVA"
-        assert _clean_bank_name("Mercado Pago W") == "MercadoPago"
+        assert clean_bank_name("BBVA Mexico") == "BBVA"
+        assert clean_bank_name("BBVA MEXICO") == "BBVA"
+        assert clean_bank_name("BBVA Bancomer") == "BBVA"
+        assert clean_bank_name("Mercado Pago W") == "MercadoPago"
 
     # ── Ph2-2B: new aliases ───────────────────────────────────────
     def test_nu_mexico_alias(self):
-        assert _clean_bank_name("Nu Mexico") == "NuMexico"
-        assert _clean_bank_name("NU MEXICO") == "NuMexico"
+        assert clean_bank_name("Nu Mexico") == "NuMexico"
+        assert clean_bank_name("NU MEXICO") == "NuMexico"
 
     def test_american_express_alias(self):
-        assert _clean_bank_name("American Express") == "Amex"
+        assert clean_bank_name("American Express") == "Amex"
 
 
 # ── extract_info (integration) ──────────────────────────────────────────

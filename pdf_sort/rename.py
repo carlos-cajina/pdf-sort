@@ -7,6 +7,7 @@ import logging
 from collections import Counter
 from datetime import datetime
 from .extract import TransactionInfo
+from .types import PlanItem
 
 logger = logging.getLogger(__name__)
 
@@ -38,32 +39,33 @@ def build_filename(info: TransactionInfo, suffix: str = "") -> str | None:
     base = f"transf{info.source_bank}_to_{info.dest_bank}_x{amount_str}_{month_str}"
     if suffix:
         base += f"_{suffix}"
-    # Append .pdf only if not already present (LO-5)
     if not base.lower().endswith(".pdf"):
         base += ".pdf"
     return base
 
 
-def deduplicate(plan: list[dict]) -> list[dict]:
-    """Assign unique suffixes to colliding target names using Counter (CR-1 fix)."""
+def deduplicate(plan: list[PlanItem]) -> list[PlanItem]:
+    """Assign unique suffixes to colliding target names.
+
+    Pure: returns a new list of new dicts; does not mutate inputs.
+    """
     name_counter: Counter[str] = Counter()
-    final: list[dict] = []
+    result: list[PlanItem] = []
 
     for item in plan:
         info: TransactionInfo = item["info"]
         base = build_filename(info)
         if base is None:
-            item["new_name"] = None
-            final.append(item)
+            result.append({**item, "new_name": None})
             continue
 
         name_counter[base] += 1
         count = name_counter[base]
         if count > 1:
             base_no_ext = base.rsplit(".pdf", 1)[0] if base.lower().endswith(".pdf") else base
-            item["new_name"] = f"{base_no_ext}_{count}.pdf"
+            result.append({**item, "new_name": f"{base_no_ext}_{count}.pdf"})
         else:
-            item["new_name"] = base
-        final.append(item)
+            result.append({**item, "new_name": base})
 
-    return final
+    return result
+

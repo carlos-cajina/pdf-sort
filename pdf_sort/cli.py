@@ -11,7 +11,12 @@ import pdfplumber
 from . import __version__
 from .extract import extract_info
 from .interactive import filter_plan_interactive
-from .io import copy_pdfs, rename_with_rollback, archive_processed
+from .io import (
+    archive_renamed,
+    copy_pdfs,
+    move_processed,
+    rename_with_rollback,
+)
 from .output import (
     FileResult,
     RunSummary,
@@ -20,6 +25,7 @@ from .output import (
     want_color,
 )
 from .rename import deduplicate
+from .types import PlanItem
 
 logger = logging.getLogger("pdf_sort")
 
@@ -117,9 +123,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
-def _extract_entries(copied: list[Path]) -> list[dict]:
+def _extract_entries(copied: list[Path]) -> list[PlanItem]:
     """Open each PDF and build a plan entry.  Logs per-file status."""
-    entries: list[dict] = []
+    entries: list[PlanItem] = []
     for path in copied:
         try:
             with pdfplumber.open(path) as pdf:
@@ -147,7 +153,7 @@ def _extract_entries(copied: list[Path]) -> list[dict]:
     return entries
 
 
-def _build_results(plan: list[dict]) -> tuple[list[FileResult], int, int]:
+def _build_results(plan: list[PlanItem]) -> tuple[list[FileResult], int, int]:
     """Convert plan items to FileResult objects; return (results, renamed, skipped)."""
     results: list[FileResult] = []
     renamed = 0
@@ -218,13 +224,10 @@ def main(argv: list[str] | None = None) -> int:
     renamed = rename_with_rollback(plan, output_dir)
 
     # ── Step 5: Archive ────────────────────────────────────────────────
-    if processed_dir or renamed_dir:
-        copied_count, moved_count = archive_processed(
-            renamed, input_dir,
-            processed_dir=processed_dir,
-            renamed_dir=renamed_dir,
-            dry_run=False,
-        )
+    if renamed_dir is not None:
+        copied_count = archive_renamed(renamed, renamed_dir, dry_run=False)
+    if processed_dir is not None:
+        moved_count = move_processed(renamed, input_dir, processed_dir, dry_run=False)
 
     summary = RunSummary(
         total=len(plan), renamed=len(renamed), skipped=skipped_count,
