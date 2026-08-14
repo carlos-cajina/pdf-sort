@@ -4,14 +4,13 @@ from __future__ import annotations
 
 import argparse
 import logging
-import sys
 from pathlib import Path
 
 import pdfplumber
 
 from .extract import extract_info
 from .io import copy_pdfs, rename_with_rollback, archive_processed
-from .rename import build_filename, deduplicate
+from .rename import deduplicate
 
 logger = logging.getLogger("pdf_sort")
 
@@ -162,7 +161,7 @@ def main(argv: list[str] | None = None) -> list[dict] | None:
                         print(f"    {p['original']} → {processed_dir / p['original']}")
 
         print("\nTo proceed with actual renaming, run:")
-        print("  python3 -m pdf_sort.cli --execute\n")
+        print("  python3 -m pdf_sort --execute\n")
         return plan
 
     print("=" * 80)

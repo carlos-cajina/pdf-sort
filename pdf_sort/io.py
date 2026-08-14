@@ -29,6 +29,10 @@ def copy_pdfs(input_dir: Path, output_dir: Path, overwrite: bool = True) -> list
     *overwrite=True* the last file wins; with *overwrite=False* the first
     file wins and duplicates are skipped.
     """
+    if not input_dir.is_dir():
+        logger.error("Input directory does not exist: %s", input_dir)
+        return []
+
     output_dir.mkdir(parents=True, exist_ok=True)
     pdf_files = sorted(
         f for f in input_dir.iterdir()
@@ -103,6 +107,9 @@ def build_source_index(input_dir: Path) -> dict[str, Path]:
     This allows O(1) lookup instead of O(n) scanning when finding source files
     by their sanitized names.
     """
+    if not input_dir.is_dir():
+        return {}
+
     return {
         sanitize_filename(f.name): f
         for f in input_dir.iterdir()

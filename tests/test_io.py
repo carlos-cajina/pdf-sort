@@ -1,10 +1,27 @@
 """Unit tests for pdf_sort.io module."""
 
-import pytest
-import tempfile
-from pathlib import Path
+from pdf_sort.io import (
+    sanitize_filename,
+    copy_pdfs,
+    archive_processed,
+    _find_source_in_dir,
+    build_source_index,
+)
 
-from pdf_sort.io import sanitize_filename, copy_pdfs, archive_processed, _find_source_in_dir
+
+class TestBuildSourceIndex:
+    def test_returns_empty_for_missing_dir(self, tmp_path):
+        assert build_source_index(tmp_path / "nonexistent") == {}
+
+    def test_indexes_pdfs(self, tmp_path):
+        d = tmp_path / "src"
+        d.mkdir()
+        (d / "a.pdf").write_text("x")
+        (d / "My File.pdf").write_text("y")
+        (d / "readme.txt").write_text("z")
+        idx = build_source_index(d)
+        assert len(idx) == 2
+        assert (tmp_path / "src" / "a.pdf") in idx.values()
 
 
 class TestFindSourceInDir:
@@ -56,6 +73,12 @@ class TestSanitizeFilename:
 
 
 class TestCopyPdfs:
+    def test_missing_input_dir_returns_empty(self, tmp_path):
+        """copy_pdfs should not crash when input_dir doesn't exist."""
+        result = copy_pdfs(tmp_path / "nonexistent", tmp_path / "dst")
+        assert result == []
+        assert not (tmp_path / "dst").exists()
+
     def test_copies_pdf_files(self, tmp_path):
         src = tmp_path / "src"
         dst = tmp_path / "dst"

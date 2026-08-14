@@ -51,6 +51,8 @@ options:
   --input-dir DIR        Directory containing source PDFs (default: ~/Downloads)
   --output-dir DIR       Directory to copy and rename files into (default: current dir)
   --overwrite            Overwrite existing files when copying (default: True)
+  --processed-dir DIR    Move successfully processed source PDFs into this directory
+  --renamed-dir DIR      Copy renamed PDFs into this directory
   -v, --verbose          Enable debug-level logging
   -h, --help             Show help message and exit
 ```
@@ -77,6 +79,15 @@ python3 -m pdf_sort --execute --verbose
 **Skip overwriting existing files in the output directory:**
 ```bash
 python3 -m pdf_sort --execute --no-overwrite
+```
+
+**Two-stage archival (move originals, copy renamed copies):**
+```bash
+python3 -m pdf_sort --execute \
+  --input-dir ~/Downloads \
+  --output-dir /tmp/pdf_sort_work \
+  --processed-dir ~/Downloads/processed \
+  --renamed-dir ~/Downloads/renamed
 ```
 
 > Note: `--overwrite` is the default. Use `--no-overwrite` to skip files that already exist.
@@ -146,18 +157,21 @@ transf<SourceBank>_to_<DestinationBank>_x<Amount>_MMMYYYY.pdf
 pdf-sort/
 ├── README.md
 ├── CODE_REVIEW.md
+├── pyproject.toml                ← package metadata, dependencies, CLI entry point
+├── requirements.txt              ← pinned dependencies
 ├── rename_transfers.py          ← backward-compatible entry point
 ├── pdf_sort/
-│   ├── __init__.py
+│   ├── __init__.py              ← package version
 │   ├── __main__.py              ← `python3 -m pdf_sort`
-│   ├── extract.py               ← date, bank, amount extraction
-│   ├── rename.py                ← filename building, deduplication
-│   ├── io.py                    ← file copy, sanitize, rename with rollback
-│   └── cli.py                   ← CLI argument parsing, orchestration
+│   ├── extract.py               ← date, bank, amount extraction (514 lines)
+│   ├── rename.py                ← filename building, deduplication (69 lines)
+│   ├── io.py                    ← file copy, sanitize, rename with rollback (190 lines)
+│   └── cli.py                   ← CLI argument parsing, orchestration (195 lines)
 └── tests/
-    ├── test_extraction.py       ← 29 tests (dates, banks, amounts)
-    ├── test_rename.py           ← 10 tests (filenames, dedup)
-    └── test_io.py               ← 8 tests (sanitize, copy)
+    ├── __init__.py
+    ├── test_extraction.py       ← 64 tests (dates, banks, amounts, corrupt text)
+    ├── test_rename.py           ← 12 tests (filenames, dedup)
+    ├── test_io.py               ← 23 tests (sanitize, copy, archive)
 ```
 
 ---
@@ -169,7 +183,7 @@ python3 -m pytest tests/ -v
 ```
 
 ```
-49 passed in 0.08s
+99 passed in 0.24s
 ```
 
 ---
