@@ -71,6 +71,16 @@ class TestParseDate:
     def test_none_on_no_match(self):
         assert parse_date("random text without dates") is None
 
+    def test_fecha_operacion_sept(self):
+        """Santander uses 4-letter 'sept' for September."""
+        text = "Fecha de operación 07/sept/2026"
+        assert parse_date(text) == datetime(2026, 9, 7, tzinfo=MX_TZ)
+
+    def test_corrupted_numeric_date_glued_time(self):
+        """U+FFFF stripped from '2026\uFFFF8:25:57' glues year to time."""
+        text = "FECHADEOPERACI\u00d3N 29/06/20268:25:57PM"
+        assert parse_date(text) == datetime(2026, 6, 29, tzinfo=MX_TZ)
+
     # ── Ph1-1B: hyphenated dates ──────────────────────────────────
     def test_hyphenated_fecha_operacion(self):
         """22-04-2026 (BBVA SPEI receipt)"""
@@ -296,6 +306,22 @@ class TestIdentifyBanks:
         assert src == "BBVA"
         assert dst == "BBVA"
 
+    # ── BBVA debit-card transfer (1785324240.pdf) ──────────────────
+    def test_bbva_debit_card_to_other(self):
+        """BBVA debit-card transfer has no BANCO DESTINO marker."""
+        text = """\
+CAJINA MORALES CARLOS ERNESTO
+A tarjeta de Débito
+Cuenta de retiro: LIBRETONB
+Cuenta destino: *****62118
+Nombre del beneficiario: PEDRO CASTILLO BECERRA
+Importe: $950.00
+BBVA México, S.A., Institución de Banca Múltiple, Grupo Financiero BBVA México.
+"""
+        src, dst = identify_banks(text)
+        assert src == "BBVA"
+        assert dst == "OTHER"
+
     # ── Ph2-2C: Santander programmed TDC ───────────────────────────
     def test_santander_programmed_tdc_to_bbva(self):
         src, dst = identify_banks(_SANTANDER_PROGRAMMED_TEXT)
@@ -400,6 +426,11 @@ class TestExtractAmount:
         text = "Importe del pago en Pesos\n$6,602.43"
         assert extract_amount(text) == 6602.43
 
+    def test_importe_del_pago_en_same_line(self):
+        """AmEx Confirm Payment: amount on the same line, Pesos on the next."""
+        text = "Importe del pago en $3,600.00\nPesos Otra cantidad en Pesos"
+        assert extract_amount(text) == 3600.00
+
     # ── Ph1-1A + Ph2-2C: Importe Pagado with decimals ─────────────────
     def test_importe_pagado_multiline_with_decimals(self):
         text = "Importe Pagado:\n$10,224.01"
@@ -496,6 +527,22 @@ class TestExtractInfo:
         assert info.dest_bank == "Amex"
         assert info.amount == 6602.43
         assert info.date == datetime(2026, 5, 14, tzinfo=MX_TZ)
+        assert info.is_complete()
+
+    def test_amex_confirm_payment_layout(self):
+        """Real AmEx Confirm Payment: same-line Fecha and en-$amount layout."""
+        text = """\
+American Express - Confirm Payment 13/07/26, 9:55 a.m.
+Cuenta Bancaria SANTANDER - 6784
+Importe del pago en $3,600.00
+Pesos Otra cantidad en Pesos
+Fecha 13 jul, 2026
+"""
+        info = extract_info(text)
+        assert info.source_bank == "Santander"
+        assert info.dest_bank == "Amex"
+        assert info.amount == 3600.00
+        assert info.date == datetime(2026, 7, 13, tzinfo=MX_TZ)
         assert info.is_complete()
 
     # ── Ph1-1A: whole-number amount ──────────────────────────────────

@@ -14,23 +14,24 @@ MX_TZ: Final = ZoneInfo("America/Mexico_City")
 
 MONTH_MAP_ES: Final[dict[str, int]] = {
     "ene": 1, "feb": 2, "mar": 3, "abr": 4, "may": 5, "jun": 6,
-    "jul": 7, "ago": 8, "sep": 9, "oct": 10, "nov": 11, "dic": 12,
+    "jul": 7, "ago": 8, "sep": 9, "sept": 9, "oct": 10, "nov": 11, "dic": 12,
 }
 
 _STRIP_CORRUPT_RE: Final = re.compile(r"[\uffff\ufffd\x00]")
 
 
 _DATE_DMY_PATTERNS: Final[list[tuple[re.Pattern[str], str]]] = [
-    (re.compile(r"(\d{1,2})/([A-Za-z]{3})/(\d{4})"), "%b"),
-    (re.compile(r"(\d{1,2})/([A-Za-z]{3})/(\d{2})"), "%y"),
-    (re.compile(r"Fecha de operación\s+(\d{1,2})/([A-Za-z]{3})/(\d{4})"), "%b"),
-    (re.compile(r"Fecha y hora de operación\s+(\d{1,2})/([A-Za-z]{3})/(\d{4})"), "%b"),
-    (re.compile(r"Fecha y hora de operación\s+(\d{1,2})/([A-Za-z]{3})/(\d{2})"), "%y"),
-    (re.compile(r"Fecha y hora de aplicación\s+(\d{1,2})/([A-Za-z]{3})/(\d{4})"), "%b"),
-    (re.compile(r"(\d{1,2})\s+(Ene|Feb|Mar|Abr|May|Jun|Jul|Ago|Sep|Oct|Nov|Dic)\s+(\d{4})", re.IGNORECASE), "%b"),
+    (re.compile(r"(\d{1,2})/([A-Za-z]{3,4})/(\d{4})"), "%b"),
+    (re.compile(r"(\d{1,2})/([A-Za-z]{3,4})/(\d{2})"), "%y"),
+    (re.compile(r"Fecha de operación\s+(\d{1,2})/([A-Za-z]{3,4})/(\d{4})"), "%b"),
+    (re.compile(r"Fecha y hora de operación\s+(\d{1,2})/([A-Za-z]{3,4})/(\d{4})"), "%b"),
+    (re.compile(r"Fecha y hora de operación\s+(\d{1,2})/([A-Za-z]{3,4})/(\d{2})"), "%y"),
+    (re.compile(r"Fecha y hora de aplicación\s+(\d{1,2})/([A-Za-z]{3,4})/(\d{4})"), "%b"),
+    (re.compile(r"(\d{1,2})\s+(Ene|Feb|Mar|Abr|May|Jun|Jul|Ago|Sep|Sept|Oct|Nov|Dic)\s+(\d{4})", re.IGNORECASE), "%b"),
     (re.compile(r"(\d{1,2})\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{4})"), "%b"),
     (re.compile(r"Fecha de aplicación:\s*(\d{1,2})\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+(\d{4})"), "%b"),
-    (re.compile(r"Fecha\s*\n(\d{1,2})\s+([A-Za-z]{3}),\s*(\d{4})"), "%b"),
+    (re.compile(r"Fecha\s*\n(\d{1,2})\s+([A-Za-z]{3,4}),\s*(\d{4})"), "%b"),
+    (re.compile(r"Fecha\s+(\d{1,2})\s+([A-Za-z]{3,4}),?\s*(\d{4})"), "%b"),
 ]
 
 _DATE_NUMERIC_PATTERNS: Final[list[re.Pattern[str]]] = [
@@ -38,11 +39,12 @@ _DATE_NUMERIC_PATTERNS: Final[list[re.Pattern[str]]] = [
     re.compile(r"Fecha de operación:\s*(\d{2})-(\d{2})-(\d{4})\b"),
     re.compile(r"Fecha de aplicación:\s*(\d{2})-(\d{2})-(\d{4})\b"),
     re.compile(r"Fecha:\s*(\d{2})/(\d{2})/(\d{4})\b"),
-    re.compile(r"\b(\d{2})/(\d{2})/(\d{4})\b"),
+    re.compile(r"\b(\d{2})/(\d{2})/(\d{4})"),
     re.compile(r"\b(\d{2})-(\d{2})-(\d{4})\b"),
 ]
 
 _AMOUNT_PATTERNS: Final[list[re.Pattern[str]]] = [
+    re.compile(r"Importe del pago en\s*\$?\s*([\d,]+\.\d{2})", re.IGNORECASE),
     re.compile(r"Importe\s+\$?\s*([\d,]+\.\d{2})", re.IGNORECASE),
     re.compile(r"Importe a pagar:\s*\$?\s*([\d,]+\.\d{2})"),
     re.compile(r"Importe:\s*\$?\s*([\d,]+\.\d{2})"),
@@ -85,6 +87,9 @@ BANK_SIGNATURES: Final[dict[str, dict[str, list[str]]]] = {
         "own_tdc_markers": [
             ("BBVA", "CUENTA DESTINO", "TARJETA DE CRÉDITO"),
             ("BBVA", "TIPO DE OPERACIÓN", "TRASPASO CUENTAS PROPIAS"),
+        ],
+        "debit_card_markers": [
+            ("TARJETA DE DÉBITO", "CUENTA DESTINO"),
         ],
         "fuzzy_markers": [
             ("BBV", "CUENT", "DESTINO", "TARJET", "CRÉDITO"),

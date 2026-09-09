@@ -201,6 +201,12 @@ def _parse_bbva(text: str, text_upper: str) -> tuple[str, str] | None:
                 break
 
     if not is_bbva:
+        for debit_set in cfg.get("debit_card_markers", []):
+            if all(m in text_upper for m in debit_set):
+                is_bbva = True
+                break
+
+    if not is_bbva:
         text_nospace = text_upper.replace(" ", "")
         for fuzzy_set in cfg.get("fuzzy_markers", []):
             if all(m.replace(" ", "") in text_nospace for m in fuzzy_set):
@@ -212,6 +218,10 @@ def _parse_bbva(text: str, text_upper: str) -> tuple[str, str] | None:
 
     if not is_bbva:
         return None
+
+    if any(all(m in text_upper for m in debit_set)
+           for debit_set in cfg.get("debit_card_markers", [])):
+        return (clean_bank_name("BBVA"), "OTHER")
 
     m = _BBVA_DEST_RE.search(text)
     if m:
