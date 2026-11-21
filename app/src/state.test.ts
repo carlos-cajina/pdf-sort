@@ -37,7 +37,14 @@ function completeInfo(): TransactionInfo {
 }
 
 function entry(name: string): ScanEntry {
-  return { name, file: new File([name], name, { type: "application/pdf" }) };
+  const handle: any = {
+    kind: "file",
+    name,
+    async getFile(): Promise<File> {
+      return new File([name], name, { type: "application/pdf" });
+    },
+  };
+  return { name, file: new File([name], name, { type: "application/pdf" }), handle };
 }
 
 function makeRow(original: string, overrides: Partial<Row> = {}): Row {

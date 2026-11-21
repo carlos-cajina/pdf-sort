@@ -4,7 +4,7 @@ import { buildFilename, sanitizeFilename } from "./engine/rename";
 import type { ScanEntry } from "./fs/scan";
 import { planRenames, type RowOutcome } from "./fs/write";
 
-export type RowStatus = "parsing" | "ready" | "incomplete" | "error" | "excluded";
+export type RowStatus = "parsing" | "ready" | "incomplete" | "error" | "excluded" | "done";
 
 export type Row = {
   original: string;
@@ -111,6 +111,10 @@ export function toggleRow(rows: Row[], original: string): Row[] {
     if (row.original !== original) {
       return row;
     }
+    if (row.status === "done") {
+      // Already renamed in a prior run; toggling must not reactivate it.
+      return row;
+    }
     if (row.status !== "excluded") {
       return { ...row, status: "excluded" };
     }
@@ -127,8 +131,11 @@ export function toggleRow(rows: Row[], original: string): Row[] {
 
 /** Plan sanitized manual names and auto names together, preserving each row's proposal. */
 export function computePlan(rows: Row[], existingNames: Set<string>): Row[] {
+  // Done rows (already renamed in a prior run) are terminal: keep their
+  // finalName, do not re-plan them, so a second run cannot bump them to _2.
+  const active = rows.filter((row) => row.status !== "done");
   const planned = planRenames(
-    rows.map((row) => ({ ...row, proposed: resolveProposed(row) })),
+    active.map((row) => ({ ...row, proposed: resolveProposed(row) })),
     existingNames
   );
 
@@ -138,6 +145,9 @@ export function computePlan(rows: Row[], existingNames: Set<string>): Row[] {
     planned.map((plannedRow) => [plannedRow.original, plannedRow])
   );
   return rows.map((row) => {
+    if (row.status === "done") {
+      return row;
+    }
     const plannedRow = plannedByOriginal.get(row.original);
     return {
       ...row,
@@ -176,12 +186,12 @@ export function summary(rows: Row[], outcomes: RowOutcome[]): string {
     (outcome) => outcome.status === "written" || outcome.status === "moved"
   ).length;
   const failed = outcomes.filter((outcome) => outcome.status === "failed").length;
-  // Skipped means never attempted: excluded or blank rows have no finalName
-  // and executeRenames records no outcome for them. Parse-error rows also
-  // have no finalName, but they failed rather than being skipped — they are
-  // visible in the table and excluded from the skipped count.
+  // Skipped means never attempted: excluded, blank, or already-done rows have
+  // no finalName and executeRenames records no outcome for them. Parse-error
+  // rows also have no finalName, but they failed rather than being skipped —
+  // they are visible in the table and excluded from the skipped count.
   const skipped = rows.filter(
-    (row) => row.finalName === null && row.status !== "error"
+    (row) => row.finalName === null && row.status !== "error" && row.status !== "done"
   ).length;
   return `${renamed} renamed, ${skipped} skipped, ${failed} failed`;
 }

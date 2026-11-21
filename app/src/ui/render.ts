@@ -85,6 +85,7 @@ export function renderApp(
   const renameCount = state.rows.filter(
     (row) =>
       row.status !== "excluded" &&
+      row.status !== "done" &&
       (row.finalName !== null ||
         (row.status === "incomplete" && row.manualName.trim() !== ""))
   ).length;
@@ -284,7 +285,11 @@ function renderRows(
     tableRow.append(arrow);
 
     const name = document.createElement("td");
-    if (row.status === "incomplete") {
+    if (
+      row.status === "incomplete" &&
+      row.finalName === null
+    ) {
+      // No final name committed yet: show an input for the user to type one.
       const input = document.createElement("input");
       input.type = "text";
       input.value = pendingManualEdit(row.original) ?? row.manualName;
@@ -329,14 +334,16 @@ function statusGlyph(row: Row): string {
       return "—";
     case "parsing":
       return "…";
-    default: {
+    case "done":
+      // Already renamed in a prior run.
+      return "✓";
+    default:
       // Compile-time exhaustiveness: a new RowStatus fails this assignment.
       const exhaustive: never = row.status;
       // Runtime fallback: an unexpected status degrades to "?" instead of
       // crashing the whole render.
       void exhaustive;
       return "?";
-    }
   }
 }
 

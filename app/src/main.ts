@@ -32,11 +32,22 @@ import {
 
 const app = document.querySelector<HTMLDivElement>("#app");
 let mouseDown = false;
+
+function setMouseDown(value: boolean): void {
+  mouseDown = value;
+}
+
 app?.addEventListener("mousedown", () => {
-  mouseDown = true;
+  setMouseDown(true);
 }, true);
 window.addEventListener("mouseup", () => {
-  mouseDown = false;
+  setMouseDown(false);
+}, true);
+document.addEventListener("mouseup", () => {
+  setMouseDown(false);
+}, true);
+window.addEventListener("blur", () => {
+  setMouseDown(false);
 }, true);
 
 let inputDir: FileSystemDirectoryHandle | null = null;
@@ -474,6 +485,17 @@ async function rename(): Promise<void> {
     });
     recordSuccessfulNames(planned, outcomes);
 
+    // Terminalize rows that were successfully written or moved so a later
+    // Rename click cannot re-plan them (which would bump to _2/_3 again).
+    for (const outcome of outcomes) {
+      if (outcome.status === "written" || outcome.status === "moved") {
+        const row = state.rows.find((candidate) => candidate.original === outcome.original);
+        if (row !== undefined && row.finalName !== null) {
+          row.status = "done";
+        }
+      }
+    }
+
     const writeCollisions = outcomes.filter(
       (outcome) => outcome.writeCollision === true
     );
@@ -589,9 +611,12 @@ function toRenameRows(rows: Row[], entries: ScanEntry[]): RenameRow[] {
     if (!entry) {
       throw new Error(`Scanned file is missing: ${row.original}`);
     }
+    // Use the file handle to fetch fresh bytes at write time instead of the
+    // scan-time snapshot. This avoids writing stale bytes if the source file
+    // was replaced on disk between scan and rename.
     renameRows.push({
       original: row.original,
-      bytes: () => entry.file.arrayBuffer(),
+      bytes: () => entry.handle.getFile().then((file) => file.arrayBuffer()),
       finalName: row.finalName,
       kind: row.manualName.trim() === "" ? "auto" : "manual",
       collision: row.collision,

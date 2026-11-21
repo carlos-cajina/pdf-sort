@@ -30,14 +30,14 @@ Method: four passes (plan/spec/ledger + commit inventory; engine + pdf reconstru
 ### Minor (Nice to Have) — numbered findings #4-#15
 4. `handles.ts:3-5` pickFolder without `{mode:'readwrite'}` → immediate post-pick permission reads may say "prompt", double-prompting.
 5. `state.ts:126-128`/`write.ts:125-127` manual name without `.pdf` written with no extension (placeholder promises `filename.pdf`; nothing enforces).
-6. `main.ts:374-380` + `render.ts:82-97` rows not retired after a successful run → second Rename click creates duplicate `_2` outputs (and reports failures with moveProcessed). PARKED (behavior change; rescan exists).
+6. `main.ts:374-380` + `render.ts:82-97` rows not retired after a successful run → second Rename click creates duplicate `_2` outputs (and reports failures with moveProcessed). **FIXED** — terminal `"done"` status added to `RowStatus`; `computePlan()` skips done rows; retirement logic in `rename()`.
 7. `render.ts:124-138` empty-state instruction renders simultaneously with the progress bar during scan.
 8. `main.ts:358-373` duplicate/overwritten collision notices (Cancel message overwritten by remainingCollisions notice).
-9. `render.ts:238-256` incomplete rows never show planned final name (incl. `_2` dedup suffixes) — visual dry-run promise incomplete. PARKED.
-10. `main.ts:436` write bytes from scan-time File snapshot while `removeEntry` deletes current path (replace-between-scan-and-rename). PARKED (File snapshot fails loudly in practice).
+9. `render.ts:238-256` incomplete rows never show planned final name (incl. `_2` dedup suffixes) — visual dry-run promise incomplete. **FIXED** — `renderRows()` now shows finalName when committed; input shown only while `finalName === null`.
+10. `main.ts:436` write bytes from scan-time File snapshot while `removeEntry` deletes current path (replace-between-scan-and-rename). **FIXED** — `ScanEntry` now carries a `handle`; `toRenameRows()` fetches fresh bytes at write time via `handle.getFile()`.
 11. `state.ts:146` parse-error rows counted "skipped" in summary. PARKED.
 12. `render.ts:199` arrow `<th>` empty label (screen readers).
-13. `main.ts:32-38` mouseDown latch stuck if released outside window (view-only). PARKED.
+13. `main.ts:32-38` mouseDown latch stuck if released outside window (view-only). **FIXED** — added `document.mouseup` + `window.blur` listeners; `setMouseDown()` helper centralizes the latch.
 14. `main.ts:340-362` write-time collision retry all-or-nothing, not per-row (rare). PARKED.
 15. `handles.ts:18-25` saveHandle resolves on put success, not tx.oncomplete (durability nit). PARKED.
 16. Test gap: main.ts orchestration + browser worker path untested (text.test.ts mocks pdf.js; MODE short-circuits ensureWorkerPort) — the code that fails in #1 has no coverage. PARKED as follow-up (browser smoke test recommended).

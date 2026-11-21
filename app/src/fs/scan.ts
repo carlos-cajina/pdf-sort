@@ -1,6 +1,7 @@
 export type ScanEntry = {
   name: string;
   file: File;
+  handle: FileSystemFileHandle;
 };
 
 export async function scanInputFolder(
@@ -36,7 +37,7 @@ export async function scanInputFolder(
     if (file === undefined) {
       throw new Error(`getFile resolved out of order for ${fileHandle.name}`);
     }
-    return { name: fileHandle.name, file };
+    return { name: fileHandle.name, file, handle: fileHandle };
   });
 }
 
