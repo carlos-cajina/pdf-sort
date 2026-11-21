@@ -130,6 +130,8 @@ td input[type="text"]:focus { outline: none; border-color: var(--accent); box-sh
 
 .collision { color: var(--warn); font-size: 12px; margin-left: 6px; }
 
+.row-detail { color: var(--warn); font-size: 11px; margin-top: 3px; }
+
 .empty { color: var(--muted); font-size: 14px; padding: 12px 0; }
 
 .results {

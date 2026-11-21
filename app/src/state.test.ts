@@ -187,6 +187,24 @@ describe("defaultParseFile", () => {
       "transfBBVA_to_Banamex_x128.00_May2026.pdf"
     );
   });
+
+  it("explains an image-only PDF via detail", async () => {
+    vi.mocked(extractPdfText).mockResolvedValue("   ");
+
+    const result = await defaultParseFile(entry("scan.pdf"));
+
+    expect(result.proposed).toBeNull();
+    expect(result.detail).toBe("No text extracted (image-only PDF?)");
+  });
+
+  it("lists each missing field in detail", async () => {
+    vi.mocked(extractPdfText).mockResolvedValue("No useful content here");
+
+    const result = await defaultParseFile(entry("partial.pdf"));
+
+    expect(result.proposed).toBeNull();
+    expect(result.detail).toBe("Missing date and amount and source bank");
+  });
 });
 
 describe("row updates and planning", () => {

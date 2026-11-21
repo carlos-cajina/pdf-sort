@@ -273,7 +273,7 @@ function renderRows(
     const status = document.createElement("td");
     status.textContent = statusGlyph(row);
     status.className = `status ${row.status}`;
-    status.title = row.status;
+    status.title = row.detail ?? row.status;
     tableRow.append(status);
 
     const original = document.createElement("td");
@@ -301,6 +301,12 @@ function renderRows(
         handlers.onManualName(row.original, input.value);
       });
       name.append(input);
+      if (row.detail) {
+        const detail = document.createElement("p");
+        detail.className = "row-detail";
+        detail.textContent = row.detail;
+        name.append(detail);
+      }
     } else if (row.status === "error") {
       name.textContent = row.error ?? "Unable to parse PDF";
     } else if (row.status === "parsing") {

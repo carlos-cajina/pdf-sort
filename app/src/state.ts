@@ -14,9 +14,15 @@ export type Row = {
   finalName: string | null;
   collision: boolean;
   error?: string;
+  /** Why an incomplete row couldn't be named automatically (tooltip text). */
+  detail?: string;
 };
 
-type ParseResult = { info: TransactionInfo; proposed: string | null };
+type ParseResult = {
+  info: TransactionInfo;
+  proposed: string | null;
+  detail?: string;
+};
 type ParseFile = (entry: ScanEntry) => Promise<ParseResult>;
 
 const MAX_CONCURRENT_PARSES = 4;
@@ -45,7 +51,7 @@ export async function parseAll(
       const current = entries[index];
 
       try {
-        const { proposed } = await parseFile(current);
+        const { proposed, detail } = await parseFile(current);
         rows[index] = {
           original: current.name,
           status: proposed === null ? "incomplete" : "ready",
@@ -53,6 +59,7 @@ export async function parseAll(
           manualName: "",
           finalName: null,
           collision: false,
+          detail,
         };
       } catch (error) {
         rows[index] = {
@@ -92,10 +99,29 @@ export async function defaultParseFile(entry: ScanEntry): Promise<ParseResult> {
   // Empty text is incomplete by definition; make that explicit instead of
   // relying on extractInfo happening to yield nulls for empty input.
   if (text.trim() === "") {
-    return { info: extractInfo(text), proposed: null };
+    return {
+      info: extractInfo(text),
+      proposed: null,
+      detail: "No text extracted (image-only PDF?)",
+    };
   }
   const info = extractInfo(text);
-  return { info, proposed: buildFilename(info) };
+  const missing: string[] = [];
+  if (info.date === null) {
+    missing.push("date");
+  }
+  if (info.amount === null) {
+    missing.push("amount");
+  }
+  if (info.sourceBank === "UNKNOWN") {
+    missing.push("source bank");
+  }
+  return {
+    info,
+    proposed: buildFilename(info),
+    detail:
+      missing.length > 0 ? `Missing ${missing.join(" and ")}` : undefined,
+  };
 }
 
 /** Set a manual filename, returning a new row array. */
