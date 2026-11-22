@@ -12,7 +12,12 @@ The public API (this module) re-exports the names callers expect.
 from __future__ import annotations
 
 from .models import TransactionInfo, clean_bank_name, clean_text
-from .orchestrator import extract_info, identify_banks
+from .orchestrator import (
+    extract_clabe,
+    extract_info,
+    identify_banks,
+    lookup_bank_by_clabe,
+)
 from .parsers import extract_amount, parse_date
 
 __all__ = [

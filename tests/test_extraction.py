@@ -9,6 +9,8 @@ from pdf_sort.extract import (
     identify_banks,
     extract_amount,
     extract_info,
+    extract_clabe,
+    lookup_bank_by_clabe,
     clean_bank_name,
     clean_text,
     TransactionInfo,
@@ -629,3 +631,28 @@ Importe Pagado:
     assert info.source_bank == "Santander"
     assert info.amount == 900.00
     assert info.date is not None
+
+
+# ── CLABE-based bank lookup ──────────────────────────────────────────────
+
+class TestExtractClabe:
+    def test_extracts_clabe_from_santander_transfer(self):
+        text = _SANTANDER_TRANSFER_TEXT
+        clabe = extract_clabe(text)
+        assert clabe is not None
+        assert "Mercado" in clabe or "2072" in clabe
+
+    def test_returns_none_when_no_clabe_marker(self):
+        assert extract_clabe("Random text without any CLABE marker") is None
+
+
+class TestLookupBankByClabe:
+    def test_resolves_santander_prefix(self):
+        assert lookup_bank_by_clabe("50") == "Santander"
+
+    def test_resolves_unknown_prefix(self):
+        assert lookup_bank_by_clabe("99") == "UNKNOWN"
+
+
+def test_lookup_bank_by_clabe_alias_resolution():
+    assert lookup_bank_by_clabe("BANAMEX") == "Banamex"
