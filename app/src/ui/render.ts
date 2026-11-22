@@ -273,7 +273,7 @@ function renderRows(
     const status = document.createElement("td");
     status.textContent = statusGlyph(row);
     status.className = `status ${row.status}`;
-    status.title = row.detail ?? row.status;
+    status.title = row.writeError ?? row.detail ?? row.status;
     tableRow.append(status);
 
     const original = document.createElement("td");
@@ -287,7 +287,8 @@ function renderRows(
     const name = document.createElement("td");
     if (
       row.status === "incomplete" &&
-      row.finalName === null
+      row.finalName === null &&
+      row.writeError === undefined
     ) {
       // No final name committed yet: show an input for the user to type one.
       const input = document.createElement("input");
@@ -307,7 +308,7 @@ function renderRows(
         detail.textContent = row.detail;
         name.append(detail);
       }
-    } else if (row.status === "error") {
+    } else if (row.status === "error" && row.writeError === undefined) {
       name.textContent = row.error ?? "Unable to parse PDF";
     } else if (row.status === "parsing") {
       name.textContent = "Parsing…";
@@ -320,6 +321,15 @@ function renderRows(
       collision.className = "collision";
       collision.textContent = "collision — bumped to avoid overwrite";
       name.append(collision);
+    }
+
+    // A write error from the last Rename run: keep the proposed name visible
+    // and surface the error below it so the failure isn't lost.
+    if (row.writeError !== undefined) {
+      const writeError = document.createElement("p");
+      writeError.className = "row-detail row-error";
+      writeError.textContent = row.writeError;
+      name.append(writeError);
     }
     tableRow.append(name);
     body.append(tableRow);

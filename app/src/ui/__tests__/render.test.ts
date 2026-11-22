@@ -323,4 +323,42 @@ describe("renderApp", () => {
     expect(app.textContent).toContain("receipts-out");
     expect(app.textContent).toContain("Input permission needed on Scan");
   });
+
+  it("shows writeError on a ready row with the error below the name", () => {
+    stubDirectoryPicker(true);
+    const row = makeRow({
+      finalName: "transfBBVA_to_Banamex_x128.00_May2026.pdf",
+      writeError: "Permission denied: cannot write to output folder",
+    });
+
+    const app = renderApp(makeState({ rows: [row] }), makeHandlers());
+    const renderedRow = app.querySelector("tbody tr");
+    const nameCell = renderedRow?.querySelector("td:last-child");
+
+    expect(renderedRow?.textContent).toContain(
+      "transfBBVA_to_Banamex_x128.00_May2026.pdf"
+    );
+    expect(nameCell?.querySelector(".row-error")?.textContent).toBe(
+      "Permission denied: cannot write to output folder"
+    );
+    expect(renderedRow?.textContent).toContain("✓");
+  });
+
+  it("does not show writeError on a done row after a successful retry", () => {
+    stubDirectoryPicker(true);
+    const row = makeRow({
+      finalName: "transfBBVA_to_Banamex_x128.00_May2026.pdf",
+      status: "done",
+      writeError: undefined,
+    });
+
+    const app = renderApp(makeState({ rows: [row] }), makeHandlers());
+    const renderedRow = app.querySelector("tbody tr");
+    const nameCell = renderedRow?.querySelector("td:last-child");
+
+    expect(renderedRow?.textContent).toContain(
+      "transfBBVA_to_Banamex_x128.00_May2026.pdf"
+    );
+    expect(nameCell?.querySelector(".row-error")).toBeNull();
+  });
 });

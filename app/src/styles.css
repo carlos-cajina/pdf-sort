@@ -132,6 +132,8 @@ td input[type="text"]:focus { outline: none; border-color: var(--accent); box-sh
 
 .row-detail { color: var(--warn); font-size: 11px; margin-top: 3px; }
 
+.row-error { color: var(--err); font-size: 11px; margin-top: 3px; }
+
 .empty { color: var(--muted); font-size: 14px; padding: 12px 0; }
 
 .results {

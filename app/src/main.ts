@@ -496,6 +496,18 @@ async function rename(): Promise<void> {
       }
     }
 
+    // Record write errors from this run so they surface in the UI
+    for (const outcome of outcomes) {
+      const row = state.rows.find((candidate) => candidate.original === outcome.original);
+      if (row !== undefined) {
+        if (outcome.status === "written" || outcome.status === "moved") {
+          row.writeError = undefined; // clear any prior error
+        } else if (outcome.status === "failed") {
+          row.writeError = outcome.error ?? undefined;
+        }
+      }
+    }
+
     const writeCollisions = outcomes.filter(
       (outcome) => outcome.writeCollision === true
     );

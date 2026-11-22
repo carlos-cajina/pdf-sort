@@ -16,6 +16,8 @@ export type Row = {
   error?: string;
   /** Why an incomplete row couldn't be named automatically (tooltip text). */
   detail?: string;
+  /** Write error from the most recent Rename run, if any. */
+  writeError?: string;
 };
 
 type ParseResult = {
